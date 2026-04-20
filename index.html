@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRODEX - Inteligencia de Datos para PyMEs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .chart-container { position: relative; height: 300px; width: 100%; }
+        .sidebar-transition { transition: all 0.3s ease; }
+        @media (max-width: 768px) {
+            .sidebar-hidden { transform: translateX(-100%); }
+        }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 overflow-x-hidden">
+
+    <!-- Botón Menú Mobile -->
+    <button onclick="toggleSidebar()" class="fixed top-4 left-4 z-50 p-2 bg-indigo-900 text-white rounded-lg md:hidden">
+        <i data-lucide="menu"></i>
+    </button>
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar (Navegación) -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-slate-900 text-white p-6 sidebar-transition sidebar-hidden md:translate-x-0 shadow-2xl">
+            <div class="flex items-center gap-3 mb-10">
+                <div class="bg-indigo-600 p-2 rounded-lg">
+                    <i data-lucide="trending-up" class="w-6 h-6"></i>
+                </div>
+                <h1 class="text-2xl font-black tracking-tight italic">PRODEX</h1>
+            </div>
+
+            <nav class="space-y-2">
+                <button onclick="switchTab('dashboard')" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-indigo-800 transition group">
+                    <i data-lucide="layout-dashboard" class="group-hover:scale-110 transition"></i>
+                    <span class="font-medium">Dashboard</span>
+                </button>
+                <button onclick="switchTab('inventario')" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-indigo-800 transition group">
+                    <i data-lucide="database" class="group-hover:scale-110 transition"></i>
+                    <span class="font-medium">Inventario</span>
+                </button>
+                <button onclick="switchTab('insights')" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-indigo-800 transition group">
+                    <i data-lucide="lightbulb" class="group-hover:scale-110 transition"></i>
+                    <span class="font-medium">Insights IA</span>
+                </button>
+                <button onclick="switchTab('reportes')" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-indigo-800 transition group">
+                    <i data-lucide="file-text" class="group-hover:scale-110 transition"></i>
+                    <span class="font-medium">Reportes</span>
+                </button>
+            </nav>
+
+            <div class="mt-auto pt-10 border-t border-slate-800 absolute bottom-6 left-6 right-6">
+                <div class="flex items-center gap-2 text-green-400 text-xs font-bold uppercase tracking-widest">
+                    <i data-lucide="wifi" class="w-4 h-4"></i>
+                    <span>Modo Offline Activo</span>
+                </div>
+                <p class="text-[10px] text-slate-500 mt-1 uppercase italic">Sincronización Local (PWA)</p>
+            </div>
+        </aside>
+
+        <!-- Contenido Principal -->
+        <main class="flex-1 md:ml-64 p-4 md:p-8">
+            <!-- Header -->
+            <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <div>
+                    <h2 id="view-title" class="text-3xl font-black text-slate-900">Dashboard Estratégico</h2>
+                    <p class="text-slate-500 font-medium">Análisis de Rentabilidad: Panadería "La Esperanza"</p>
+                </div>
+                <div class="flex gap-3">
+                    <button class="bg-white border border-slate-200 px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm hover:bg-slate-50 transition font-semibold">
+                        <i data-lucide="calendar" class="w-4 h-4 text-indigo-600"></i> Últimos 30 días
+                    </button>
+                    <button class="bg-indigo-600 text-white px-5 py-2 rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition font-bold">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Registro
+                    </button>
+                </div>
+            </header>
+
+            <!-- Secciones Dinámicas -->
+            <div id="content">
+                <!-- El contenido se inyecta vía JS -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Asistente Virtual (ChatGPT Style) -->
+    <div class="fixed bottom-6 right-6 z-50">
+        <button onclick="toggleChat()" class="bg-indigo-600 text-white p-4 rounded-full shadow-2xl hover:scale-110 transition">
+            <i data-lucide="message-square"></i>
+        </button>
+        <div id="chat-box" class="hidden absolute bottom-20 right-0 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5">
+            <div class="bg-indigo-900 p-4 text-white font-bold flex justify-between">
+                <span>Asistente PRODEX</span>
+                <i data-lucide="bot" class="w-5 h-5"></i>
+            </div>
+            <div id="chat-messages" class="h-64 p-4 overflow-y-auto text-sm space-y-4 bg-slate-50">
+                <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                    Hola 👋 Soy tu asistente IA. ¿Qué producto te dio más ganancia hoy?
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-100 flex gap-2">
+                <input type="text" id="chat-input" placeholder="Pregunta algo..." class="flex-1 text-sm border-none focus:ring-0">
+                <button onclick="sendMessage()" class="text-indigo-600"><i data-lucide="send"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- LÓGICA DE NEGOCIO Y DATOS ---
+        const INVENTORY_DATA = [
+            { id: 1, item: 'Harina Integral', categoria: 'Insumos', stock: 5, precio: 12.5, costo: 8.0, stockOutProb: 85 },
+            { id: 2, item: 'Azúcar Refinada', categoria: 'Insumos', stock: 45, precio: 8.0, costo: 5.5, stockOutProb: 12 },
+            { id: 3, item: 'Empaques Eco', categoria: 'Logística', stock: 12, precio: 25.0, costo: 15.0, stockOutProb: 40 },
+            { id: 4, item: 'Sal Marina', categoria: 'Insumos', stock: 20, precio: 5.0, costo: 2.0, stockOutProb: 5 },
+        ];
+
+        // --- MOTOR DE NAVEGACIÓN ---
+        function switchTab(tab) {
+            const content = document.getElementById('content');
+            const title = document.getElementById('view-title');
+            
+            if (window.innerWidth < 768) toggleSidebar();
+
+            switch(tab) {
+                case 'dashboard':
+                    title.innerText = "Dashboard Estratégico";
+                    renderDashboard();
+                    break;
+                case 'inventario':
+                    title.innerText = "Gestor de Inventario";
+                    renderInventory();
+                    break;
+                case 'insights':
+                    title.innerText = "Insights IA & Predicciones";
+                    renderInsights();
+                    break;
+                case 'reportes':
+                    title.innerText = "Reportes Avanzados";
+                    content.innerHTML = `<div class="p-20 text-center text-slate-400 font-bold">Generando reporte PDF para el contador...</div>`;
+                    break;
+            }
+            lucide.createIcons();
+        }
+
+        // --- MÓDULO 1: DASHBOARD (CHART.JS) ---
+        function renderDashboard() {
+            const totalProfit = INVENTORY_DATA.reduce((acc, curr) => acc + ((curr.precio - curr.costo) * curr.stock), 0);
+
+            document.getElementById('content').innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">Utilidad Real</p>
+                        <h3 class="text-3xl font-black mt-2 text-indigo-900">$${totalProfit.toFixed(2)}</h3>
+                        <span class="text-green-500 text-xs font-bold">↑ 12.5% vs ayer</span>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">Ventas Totales</p>
+                        <h3 class="text-3xl font-black mt-2 text-slate-900">1,240</h3>
+                        <span class="text-indigo-500 text-xs font-bold">Meta: 85% alcanzada</span>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">Ticket Promedio</p>
+                        <h3 class="text-3xl font-black mt-2 text-slate-900">$18.20</h3>
+                        <span class="text-amber-500 text-xs font-bold">Estable</span>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-red-500">
+                        <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">Alertas de Stock</p>
+                        <h3 class="text-3xl font-black mt-2 text-red-600">3</h3>
+                        <span class="text-red-400 text-xs font-bold italic">¡Requiere acción!</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <h4 class="font-black text-slate-800 mb-6 flex items-center gap-2">
+                            <i data-lucide="bar-chart-3" class="text-indigo-600"></i> Ventas Mensuales vs Competencia
+                        </h4>
+                        <div class="chart-container">
+                            <canvas id="salesChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <h4 class="font-black text-slate-800 mb-6 flex items-center gap-2">
+                            <i data-lucide="pie-chart" class="text-indigo-600"></i> Segmentación de Clientes
+                        </h4>
+                        <div class="chart-container">
+                            <canvas id="clientChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <h4 class="font-black text-slate-800 mb-6 flex items-center gap-2">
+                            <i data-lucide="box" class="text-indigo-600"></i> Histograma de Precios (Distribución)
+                        </h4>
+                        <div class="chart-container">
+                            <canvas id="priceDistChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <h4 class="font-black text-slate-800 mb-6 flex items-center gap-2">
+                            <i data-lucide="target" class="text-indigo-600"></i> Dispersión de Ventas
+                        </h4>
+                        <div class="chart-container">
+                            <canvas id="scatterChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            `;
+            initCharts();
+        }
+
+        function initCharts() {
+            // Chart 1: Sales
+            new Chart(document.getElementById('salesChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May'],
+                    datasets: [{
+                        label: 'Mis Ventas',
+                        data: [400, 300, 200, 278, 189],
+                        backgroundColor: '#4f46e5',
+                        borderRadius: 8
+                    }, {
+                        label: 'Competencia (API)',
+                        data: [350, 320, 180, 250, 210],
+                        backgroundColor: '#cbd5e1',
+                        borderRadius: 8
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // Chart 2: Clients
+            new Chart(document.getElementById('clientChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Adultos', 'Jóvenes', 'Niños'],
+                    datasets: [{
+                        data: [400, 300, 100],
+                        backgroundColor: ['#312e81', '#4f46e5', '#818cf8']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // Chart 3: Distribution (Histograma simulado)
+            new Chart(document.getElementById('priceDistChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['$1-5', '$6-10', '$11-15', '$16-20', '$21+'],
+                    datasets: [{
+                        label: 'Frecuencia de Items',
+                        data: [5, 12, 18, 10, 4],
+                        backgroundColor: '#fbbf24'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // Chart 4: Scatter (Dispersión)
+            new Chart(document.getElementById('scatterChart'), {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Venta vs Hora',
+                        data: [{x: 8, y: 10}, {x: 10, y: 40}, {x: 12, y: 80}, {x: 15, y: 30}, {x: 18, y: 90}],
+                        backgroundColor: '#10b981'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        // --- MÓDULO 2: INVENTARIO (LIMPIEZA DE DATOS) ---
+        function renderInventory() {
+            document.getElementById('content').innerHTML = `
+                <div class="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                        <h4 class="font-black text-slate-800 text-lg uppercase tracking-tight">Gestión de Insumos</h4>
+                        <button onclick="cleanData()" class="bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-800 transition">
+                            <i data-lucide="wand-2" class="w-4 h-4"></i> Limpieza Automática de Datos
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 text-[10px] uppercase font-black tracking-widest border-b border-slate-100">
+                                    <th class="px-6 py-4">Producto</th>
+                                    <th class="px-6 py-4">Venta ($)</th>
+                                    <th class="px-6 py-4">Costo ($)</th>
+                                    <th class="px-6 py-4 text-green-600">Utilidad</th>
+                                    <th class="px-6 py-4">Stock</th>
+                                    <th class="px-6 py-4">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-body" class="divide-y divide-slate-50">
+                                ${INVENTORY_DATA.map(p => `
+                                    <tr class="hover:bg-slate-50 transition">
+                                        <td class="px-6 py-4 font-bold text-slate-700">${p.item}</td>
+                                        <td class="px-6 py-4 font-medium">$${p.precio.toFixed(2)}</td>
+                                        <td class="px-6 py-4 text-slate-400">$${p.costo.toFixed(2)}</td>
+                                        <td class="px-6 py-4 font-black text-green-600">+$${(p.precio - p.costo).toFixed(2)}</td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center gap-2">
+                                                <span class="font-mono bg-slate-100 px-2 py-1 rounded">${p.stock}</span>
+                                                ${p.stock < 10 ? '<i data-lucide="alert-circle" class="w-4 h-4 text-red-500"></i>' : ''}
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <button class="text-slate-300 hover:text-red-500 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function cleanData() {
+            alert("Sustitución IA (GitHub Copilot): Eliminando 2 registros duplicados y normalizando precios...");
+            renderInventory();
+        }
+
+        // --- MÓDULO 3: INSIGHTS & PREDICCIONES (TENSORFLOW STYLE) ---
+        function renderInsights() {
+            document.getElementById('content').innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                    <div class="bg-indigo-900 text-white p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+                        <div class="relative z-10">
+                            <div class="flex items-center gap-3 mb-6">
+                                <div class="bg-indigo-600 p-2 rounded-lg"><i data-lucide="brain"></i></div>
+                                <h4 class="text-xl font-black italic">Motor Predictivo PRODEX</h4>
+                            </div>
+                            <p class="text-indigo-200 mb-8 font-medium">Análisis de Desviación Estándar aplicado a tu inventario.</p>
+                            
+                            <div class="space-y-6">
+                                ${INVENTORY_DATA.filter(p => p.stockOutProb > 30).map(p => `
+                                    <div class="bg-indigo-800/50 p-4 rounded-2xl border border-indigo-700/50">
+                                        <div class="flex justify-between mb-2">
+                                            <span class="font-bold text-sm uppercase tracking-wider">${p.item}</span>
+                                            <span class="text-xs font-black ${p.stockOutProb > 70 ? 'text-red-400' : 'text-amber-400'}">
+                                                PROBABILIDAD DE AGOTAMIENTO: ${p.stockOutProb}%
+                                            </span>
+                                        </div>
+                                        <div class="w-full bg-indigo-950 rounded-full h-3">
+                                            <div class="h-3 rounded-full ${p.stockOutProb > 70 ? 'bg-red-500 shadow-[0_0_10px_#ef4444]' : 'bg-amber-500'}" style="width: ${p.stockOutProb}%"></div>
+                                        </div>
+                                        <p class="text-[10px] mt-2 text-indigo-300 italic">Recomendación IA: Comprar 15 unidades extra hoy.</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-8 rounded-3xl border border-slate-100 flex flex-col justify-center text-center">
+                        <div class="bg-green-100 text-green-600 p-4 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
+                            <i data-lucide="trending-up" class="w-10 h-10"></i>
+                        </div>
+                        <h4 class="text-2xl font-black text-slate-900 mb-2">Oportunidad Detectada</h4>
+                        <p class="text-slate-500 max-w-xs mx-auto mb-6">
+                            El costo del azúcar bajó un 15% en el mercado mayorista. Si compras ahora, tu utilidad real subirá a <span class="text-green-600 font-bold">$3.50 por unidad</span>.
+                        </p>
+                        <button class="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black shadow-xl shadow-indigo-100 hover:scale-105 transition mx-auto">
+                            Ver Proveedores
+                        </button>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        // --- UI HELPERS ---
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('sidebar-hidden');
+        }
+
+        function toggleChat() {
+            document.getElementById('chat-box').classList.toggle('hidden');
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const messages = document.getElementById('chat-messages');
+            if (!input.value) return;
+
+            // User message
+            messages.innerHTML += `
+                <div class="text-right">
+                    <div class="bg-indigo-600 text-white p-2 rounded-lg inline-block max-w-[80%]">
+                        ${input.value}
+                    </div>
+                </div>
+            `;
+
+            // IA logic simple
+            setTimeout(() => {
+                let response = "Interesante pregunta. Según mis datos, el producto con más margen es la **Harina Integral**.";
+                if (input.value.toLowerCase().includes("ganancia")) {
+                    response = "Hoy tu ganancia neta proyectada es de **$158.50**. ¡Buen trabajo!";
+                }
+                messages.innerHTML += `
+                    <div class="text-left">
+                        <div class="bg-white border border-slate-200 p-2 rounded-lg inline-block shadow-sm">
+                            ${response}
+                        </div>
+                    </div>
+                `;
+                input.value = '';
+                messages.scrollTop = messages.scrollHeight;
+            }, 800);
+        }
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            switchTab('dashboard');
+        });
+    </script>
+</body>
+</html>
