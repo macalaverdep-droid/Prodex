@@ -16,6 +16,13 @@
             .sidebar-hidden { transform: translateX(-100%); }
         }
         .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        
+        /* Animaciones de Navegación */
+        .view-animate { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 overflow-x-hidden">
@@ -75,7 +82,7 @@
                     <button class="bg-white border border-slate-200 px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm hover:bg-slate-50 transition font-semibold">
                         <i data-lucide="calendar" class="w-4 h-4 text-indigo-600"></i> Últimos 30 días
                     </button>
-                    <button class="bg-indigo-600 text-white px-5 py-2 rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition font-bold">
+                    <button onclick="openModal()" class="bg-indigo-600 text-white px-5 py-2 rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition font-bold">
                         <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Registro
                     </button>
                 </div>
@@ -110,14 +117,54 @@
         </div>
     </div>
 
+    <!-- Modal de Registro -->
+    <div id="modal" class="fixed inset-0 z-[60] hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-black text-slate-900">Nuevo Producto</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x"></i></button>
+            </div>
+            <form id="product-form" class="space-y-4" onsubmit="addProduct(event)">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Nombre del Producto</label>
+                    <input type="text" id="p-name" required class="w-full bg-slate-50 border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Precio Venta ($)</label>
+                        <input type="number" id="p-price" step="0.01" required class="w-full bg-slate-50 border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Costo ($)</label>
+                        <input type="number" id="p-cost" step="0.01" required class="w-full bg-slate-50 border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Stock Inicial</label>
+                    <input type="number" id="p-stock" required class="w-full bg-slate-50 border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                </div>
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200 transition">Cancelar</button>
+                    <button type="submit" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         // --- LÓGICA DE NEGOCIO Y DATOS ---
-        const INVENTORY_DATA = [
+        let INVENTORY_DATA = JSON.parse(localStorage.getItem('prodex_inventory')) || [
             { id: 1, item: 'Harina Integral', categoria: 'Insumos', stock: 5, precio: 12.5, costo: 8.0, stockOutProb: 85 },
             { id: 2, item: 'Azúcar Refinada', categoria: 'Insumos', stock: 45, precio: 8.0, costo: 5.5, stockOutProb: 12 },
             { id: 3, item: 'Empaques Eco', categoria: 'Logística', stock: 12, precio: 25.0, costo: 15.0, stockOutProb: 40 },
             { id: 4, item: 'Sal Marina', categoria: 'Insumos', stock: 20, precio: 5.0, costo: 2.0, stockOutProb: 5 },
         ];
+
+        let activeCharts = {}; // Registro para manejar instancias de Chart.js
+
+        function saveData() {
+            localStorage.setItem('prodex_inventory', JSON.stringify(INVENTORY_DATA));
+        }
 
         // --- MOTOR DE NAVEGACIÓN ---
         function switchTab(tab) {
@@ -125,6 +172,11 @@
             const title = document.getElementById('view-title');
             
             if (window.innerWidth < 768) toggleSidebar();
+
+            // Aplicar animación de entrada
+            content.classList.remove('view-animate');
+            void content.offsetWidth; // Trigger reflow para reiniciar animación
+            content.classList.add('view-animate');
 
             switch(tab) {
                 case 'dashboard':
@@ -214,8 +266,11 @@
         }
 
         function initCharts() {
+            // Destruir gráficos previos si existen para evitar solapamientos
+            Object.values(activeCharts).forEach(chart => chart.destroy());
+
             // Chart 1: Sales
-            new Chart(document.getElementById('salesChart'), {
+            activeCharts.sales = new Chart(document.getElementById('salesChart'), {
                 type: 'bar',
                 data: {
                     labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May'],
@@ -235,7 +290,7 @@
             });
 
             // Chart 2: Clients
-            new Chart(document.getElementById('clientChart'), {
+            activeCharts.clients = new Chart(document.getElementById('clientChart'), {
                 type: 'doughnut',
                 data: {
                     labels: ['Adultos', 'Jóvenes', 'Niños'],
@@ -248,7 +303,7 @@
             });
 
             // Chart 3: Distribution (Histograma simulado)
-            new Chart(document.getElementById('priceDistChart'), {
+            activeCharts.price = new Chart(document.getElementById('priceDistChart'), {
                 type: 'bar',
                 data: {
                     labels: ['$1-5', '$6-10', '$11-15', '$16-20', '$21+'],
@@ -262,7 +317,7 @@
             });
 
             // Chart 4: Scatter (Dispersión)
-            new Chart(document.getElementById('scatterChart'), {
+            activeCharts.scatter = new Chart(document.getElementById('scatterChart'), {
                 type: 'scatter',
                 data: {
                     datasets: [{
@@ -311,7 +366,7 @@
                                             </div>
                                         </td>
                                         <td class="px-6 py-4">
-                                            <button class="text-slate-300 hover:text-red-500 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                            <button onclick="deleteItem(${p.id})" class="text-slate-300 hover:text-red-500 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                                         </td>
                                     </tr>
                                 `).join('')}
@@ -324,6 +379,13 @@
         }
 
         function cleanData() {
+            // Ejemplo de limpieza: eliminar duplicados por nombre
+            const initialLength = INVENTORY_DATA.length;
+            const uniqueItems = Array.from(new Set(INVENTORY_DATA.map(a => a.item)))
+                .map(item => INVENTORY_DATA.find(a => a.item === item));
+            
+            INVENTORY_DATA = uniqueItems;
+            saveData();
             alert("Sustitución IA (GitHub Copilot): Eliminando 2 registros duplicados y normalizando precios...");
             renderInventory();
         }
@@ -385,6 +447,46 @@
             document.getElementById('chat-box').classList.toggle('hidden');
         }
 
+        function openModal() {
+            document.getElementById('modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+            document.getElementById('product-form').reset();
+        }
+
+        function addProduct(e) {
+            e.preventDefault();
+            const newItem = {
+                id: Date.now(),
+                item: document.getElementById('p-name').value,
+                precio: parseFloat(document.getElementById('p-price').value),
+                costo: parseFloat(document.getElementById('p-cost').value),
+                stock: parseInt(document.getElementById('p-stock').value),
+                categoria: 'Insumos',
+                stockOutProb: Math.floor(Math.random() * 30) // Simulación IA
+            };
+
+            INVENTORY_DATA.push(newItem);
+            saveData();
+            closeModal();
+            
+            // Si estamos en inventario, refrescar la tabla
+            if (document.getElementById('view-title').innerText === "Gestor de Inventario") {
+                renderInventory();
+            } else {
+                switchTab('inventario');
+            }
+        }
+
+        function deleteItem(id) {
+            INVENTORY_DATA = INVENTORY_DATA.filter(p => p.id !== id);
+            saveData();
+            renderInventory();
+        }
+
         function sendMessage() {
             const input = document.getElementById('chat-input');
             const messages = document.getElementById('chat-messages');
@@ -424,3 +526,4 @@
     </script>
 </body>
 </html>
+
